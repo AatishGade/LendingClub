@@ -141,23 +141,89 @@ Active_F = df_clean[(df_clean['grade'] == 'F') & (df_clean['loan_status'] != "Fu
 Active_F_LateFee = Active_F[(Active_F['total_rec_late_fee'] > 0)]
 Active_F_Mean = Active_F_LateFee['total_rec_late_fee'].mean()
 
-#making a new column for Active_Loan_Average_Late_Fee
-df_clean.loc[df.grade =='A', 'Active_Loan_Average_Late_Fee'] = Active_A_Mean
-df_clean.loc[df.grade =='B', 'Active_Loan_Average_Late_Fee'] = Active_B_Mean
-df_clean.loc[df.grade =='C', 'Active_Loan_Average_Late_Fee'] = Active_C_Mean
-df_clean.loc[df.grade =='D', 'Active_Loan_Average_Late_Fee'] = Active_D_Mean
-df_clean.loc[df.grade =='E', 'Active_Loan_Average_Late_Fee'] = Active_E_Mean
-df_clean.loc[df.grade =='F', 'Active_Loan_Average_Late_Fee'] = Active_F_Mean
 
-#Making a new column for Fully_paid_Average_Late_Fee
-df_clean.loc[df.grade =='A', 'Fully_Paid_Loan_Average_Late_Fee'] = fullPaid_A_Mean
-df_clean.loc[df.grade =='B', 'Fully_Paid_Loan_Average_Late_Fee'] = fullPaid_B_Mean
-df_clean.loc[df.grade =='C', 'Fully_Paid_Loan_Average_Late_Fee'] = fullPaid_C_Mean
-df_clean.loc[df.grade =='D', 'Fully_Paid_Loan_Average_Late_Fee'] = fullPaid_D_Mean
-df_clean.loc[df.grade =='E', 'Fully_Paid_Loan_Average_Late_Fee'] = fullPaid_E_Mean
-df_clean.loc[df.grade =='F', 'Fully_Paid_Loan_Average_Late_Fee'] = fullPaid_F_Mean
+#Function for making new column Active_loan_average_late_fee
+def change_active (c):
+    if (c['grade'] == 'A') & (c['loan_status'] != "Fully Paid" ) & (c['loan_status'] != 'Charged Off') & (c['loan_status'] != "Default"):
+        return Active_A_Mean
+    elif (c['grade'] == 'B') & (c['loan_status'] != "Fully Paid" ) & (c['loan_status'] != 'Charged Off') & (c['loan_status'] != "Default"):
+        return Active_B_Mean
+    elif (c['grade'] == 'C') & (c['loan_status'] != "Fully Paid" ) & (c['loan_status'] != 'Charged Off') & (c['loan_status'] != "Default"):
+        return Active_C_Mean
+    elif (c['grade'] == 'D') & (c['loan_status'] != "Fully Paid" ) & (c['loan_status'] != 'Charged Off') & (c['loan_status'] != "Default"):
+        return Active_D_Mean
+    elif (c['grade'] == 'E') & (c['loan_status'] != "Fully Paid" ) & (c['loan_status'] != 'Charged Off') & (c['loan_status'] != "Default"):
+        return Active_E_Mean
+    elif (c['grade'] == 'F') & (c['loan_status'] != "Fully Paid" ) & (c['loan_status'] != 'Charged Off') & (c['loan_status'] != "Default"):
+        return Active_F_Mean
+    else:
+        return 0    
+
+# Applying the function
+df_clean['Active_loan_Average_late_fee']=df_clean.apply(change_active, axis = 1)
+df_clean['Active_loan_Average_late_fee'].astype(float)
+
+#Function for making new column Fully_Paid_Loan_Average_late_fee
+def change_fullypaid (x):
+    if (x['grade'] == 'A') & (x['loan_status'] == 'Fully Paid'):
+        return fullPaid_A_Mean
+    elif (x['grade'] == 'B') & (x['loan_status'] == 'Fully Paid'):
+        return fullPaid_B_Mean
+    elif (x['grade'] == 'C') & (x['loan_status'] == 'Fully Paid'):
+        return fullPaid_C_Mean
+    elif (x['grade'] == 'D') & (x['loan_status'] == 'Fully Paid'):
+        return fullPaid_D_Mean
+    elif (x['grade'] == 'E') & (x['loan_status'] == 'Fully Paid'):
+        return fullPaid_E_Mean
+    elif (x['grade'] == 'F') & (x['loan_status'] == 'Fully Paid'):
+        return fullPaid_F_Mean
+    else:
+        return 0 
+
+# Applying the function
+df_clean['FullyPaid_loan_Average_late_fee'] = df_clean.apply(change_fullypaid, axis =1)
+df_clean['FullyPaid_loan_Average_late_fee'].astype(float)
+
+#Creating late Pyament modifier
+grade_A_pm = df_clean[(df_clean['grade']=='A')]
+lpm_A = (sum(grade_A_pm['total_rec_late_fee'])/ sum(grade_A_pm['funded_amnt']))*100
+
+grade_B_pm = df_clean[(df_clean['grade']=='B')]
+lpm_B = (sum(grade_B_pm['total_rec_late_fee'])/ sum(grade_B_pm['funded_amnt']))*100
+
+grade_C_pm = df_clean[(df_clean['grade']=='C')]
+lpm_C = (sum(grade_C_pm['total_rec_late_fee'])/ sum(grade_C_pm['funded_amnt']))*100
+
+grade_D_pm = df_clean[(df_clean['grade']=='D')]
+lpm_D = (sum(grade_D_pm['total_rec_late_fee'])/ sum(grade_D_pm['funded_amnt']))*100
+
+grade_E_pm = df_clean[(df_clean['grade']=='E')]
+lpm_E = (sum(grade_E_pm['total_rec_late_fee'])/ sum(grade_E_pm['funded_amnt']))*100
+
+grade_F_pm = df_clean[(df_clean['grade']=='F')]
+lpm_F = (sum(grade_F_pm['total_rec_late_fee'])/ sum(grade_F_pm['funded_amnt']))*100
 
 
+#Function for making new column Late Payment Modifier
+def paymentModifier (i):
+    if i['grade'] == 'A':
+        return lpm_A
+    elif i['grade'] == 'B':
+        return lpm_B
+    elif i['grade'] == 'C':
+        return lpm_C
+    elif i['grade'] == 'D':
+        return lpm_D
+    elif i['grade'] == 'E':
+        return lpm_E
+    elif i['grade'] == 'F':
+        return lpm_F
 
+#Applying the function
+df_clean['Late_Payment_Modifier'] = df_clean.apply(paymentModifier,axis = 1)
+df_clean['Late_Payment_Modifier'].astype(float)
 
-rt = df_clean.head(100)
+#saving the cleaned file
+df_clean.to_csv('cleaned_file.csv', index = False)
+
+rt = df_clean.head(1000)
