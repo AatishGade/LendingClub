@@ -352,3 +352,129 @@ df_head = dffun.head(100)
 #writing to csv
 
 dffun.to_csv("cleaned__file_updated.csv", index = False)
+
+
+# ppl who have charged off or default replace total_pymnt = total_pymnt_f
+
+dffun.loc[(dffun['loan_status']=='Charged Off') | (dffun['loan_status']== 'Default'),'total_pay_f'] = dffun['total_pymnt']
+    
+
+# Skwness 
+
+dfsk=pd.DataFrame()
+
+dfsk = pd.DataFrame(dffun.skew())
+dfsk.columns = ['Skew']
+dfsk["col"] = dfsk.index
+
+dfsk=dfsk.reset_index()
+
+dfsk=dfsk.drop(['index'],axis=1)
+
+dfhigsk = dfsk.loc[dfsk['Skew'] > 3]
+
+dflowsk = dfsk.loc[dfsk['Skew'] < 3]
+
+dflist = dfhigsk['col'].tolist()
+
+df_skew = dffun[dflist]
+
+dflg = np.log1p(df_skew)
+
+dflguse =pd.DataFrame()
+dflguse = pd.DataFrame(dflg.skew())
+dflguse.columns = ['Skew']
+dflguse["col"] = dflguse.index
+dflguse=dflguse.reset_index()
+dflguse = dflguse.drop(['index'],axis=1)
+
+dflgkeep = dflguse[(dflguse['Skew'] < 3) & (dflguse['Skew'] > -3)]
+
+df_log_cols = dflgkeep['col'].tolist()
+
+df_log_list = dflg[df_log_cols]
+
+
+dflogvar = df_log_list.add_prefix('log_')
+
+dflgkeep['col'] = 'log_' + dflgkeep['col']
+
+dffun_ = pd.concat([dffun,dflogvar],axis=1, sort = False)
+
+frm = [dflgkeep,dflowsk]
+
+df_skew_final = pd.concat(frm, sort = False)
+
+
+#T-Test 
+
+#case 1
+
+homevsloan = dffun[(dffun['home_ownership'] == 'RENT')] 
+rent= homevsloan['loan_amnt']
+homevsloan1 = dffun[(dffun['home_ownership'] == 'MORTGAGE')]
+mortage =homevsloan1['loan_amnt']
+# h0 = a11> = b11 h1 = b11 > a11
+
+from scipy import stats
+
+print(stats.ttest_ind(rent,mortage, equal_var = False)) # p < .001 reject h0 , ppl who have mortage tend to get more loan amount
+
+#case 2 
+
+
+debt_amount = dffun[(dffun['purpose'] == 'debt_consolidation')]
+debt = debt_amount['loan_amnt']
+house_amount = dffun[(dffun['purpose'] == 'house')]
+house = house_amount['loan_amnt']
+
+#ho = house > = debt h1 = debt > house
+
+print(stats.ttest_ind(debt, house,  equal_var = False)) # p <.001 reject h0, ppl  ask more loan amount for debt consolidation when compared to house
+
+# case 3 
+
+small_amount = dffun[(dffun['purpose'] == 'small_business')]
+small = small_amount['loan_amnt']
+
+#ho = small > = debt h1 = debt > small
+
+print(stats.ttest_ind(debt, small,  equal_var = False)) # p value = 0.08563 reject h1, so people ask higher loan amount for small business
+
+# case 4 
+
+emp_length = dffun[(dffun['emp_length'] == '10+ years')]
+ten_year = emp_length['int_rate']
+seven_year_amnt = dffun[(dffun['emp_length'] == '7 years')]
+seven_year = seven_year_amnt['int_rate']
+
+#ho = ten_year > = 7_year h1 = 7_year > 10year
+
+print(stats.ttest_ind(ten_year,seven_year,  equal_var = False)) # p value < .001 reject ho, ppl who have 7year have more interest rate
+
+
+
+#Deleting columns 
+
+del dffun['delinq_2yrs']
+del dffun['out_prncp']
+del dffun['total_pymnt']
+del dffun['collection_recovery_fee']
+del dffun['total_pymnt_inv']
+del dffun['total_rec_prncp']
+del dffun['total_rec_int']
+del dffun['total_rec_late_fee']
+del dffun['recoveries']
+del dffun['last_pymnt_amnt']
+del dffun['tot_coll_amt']
+del dffun['policy_code']
+del dffun['Active_loan_Average_late_fee']
+del dffun['FullyPaid_loan_Average_late_fee']
+del dffun['Late_Payment_Modifier']
+del dffun['late_pay']
+del dffun['total_payment_asu']
+del dffun['term']
+del dffun['url']
+del dffun['zip_code']
+del dffun['initial_list_status']
+
