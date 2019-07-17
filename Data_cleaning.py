@@ -1,7 +1,7 @@
 import pandas as pd
 import os
 import numpy as np
-
+from pandas.api.types import is_numeric_dtype
 # Selectin path & reading the file
 z = r'C:\Users\aatis\Desktop\Applied Analytics\Summer\Project\loan.csv'
 x = r'C:\Users\aatis\Desktop\Applied Analytics\Summer\Project\loan.update.csv'
@@ -49,13 +49,14 @@ df = df[(df['grade'] != "G") & (df['loan_status'] != 'Does not meet the credit p
 
 
 # Percentage of null values
-Null_percentage = df.isnull().sum()/len(df)*100
+Null_percentage = dffun.isnull().sum()/len(dffun)*100
+Null_percentaage1 = df_clean.isnull().sum()/len(df_clean)*100
 
 #selecting the columns which are less than 10% null value
 
 df_clean= df.loc[:, df.isnull().mean()<0.1]
 df_clean = df_clean[(df_clean['loan_status'] != "Issued")]
-col_name = list(df_clean.columns.values)
+
 
 #Making grade A Late_Fee Average for loan_status = "Fully paid"
 
@@ -275,7 +276,7 @@ def f(row):
 
 dffun["lc_fun"] = dffun.apply(f,axis=1)
 
-dfhead = dffun.head(100)
+
 
 #Fully Funneded
 
@@ -330,7 +331,24 @@ dflg = np.log1p(dffun["tot_coll_amt"])
 dflg.skew()
 
 
+# Reindexing the df
+dffun.info()
+dffun['Active_loan_Average_late_fee']
+dffun = dffun[['id','member_id','loan_amnt','funded_amnt','funded_amnt_inv','int_rate',
+               'installment','annual_inc','dti','delinq_2yrs','inq_last_6mths','open_acc',
+               'pub_rec','revol_bal','revol_util','total_acc','out_prncp','total_pymnt','collection_recovery_fee',
+               'total_pymnt_inv','total_rec_prncp','total_rec_int','total_rec_late_fee',
+               'recoveries','collection_recovery_fee','last_pymnt_amnt','collections_12_mths_ex_med',
+               'policy_code','acc_now_delinq','tot_coll_amt','tot_cur_bal','total_rev_hi_lim',
+               'Active_loan_Average_late_fee','FullyPaid_loan_Average_late_fee','Late_Payment_Modifier',
+               'month','lc_fun_amt','lc_fun','full_fun_amt','full_amt','return_per','over_five',
+               'total_payment_asu','late_pay','total_pay_f','term','grade','sub_grade','emp_title',
+               'emp_length','home_ownership','verification_status','issue_d','loan_status','pymnt_plan',
+               'url','purpose','title','zip_code','addr_state','earliest_cr_line','initial_list_status',
+               'last_credit_pull_d','application_type','issue_date','future_month','paid_date']]
+df_head = dffun.head(100)
 
-writer = pd.ExcelWriter('df.xlsx', engine='xlsxwriter')
-dfhead.to_excel(writer, sheet_name='A',index=False)
-writer.save()
+
+#writing to csv
+
+dffun.to_csv("cleaned__file_updated.csv", index = False)
