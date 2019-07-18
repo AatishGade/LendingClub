@@ -261,7 +261,8 @@ dffun["paid_date"]=pd.to_datetime(dffun["paid_date"]).dt.date
 
 hed=dffun.head()
 
-counttest = dffun.loan_status.value_counts()
+counttest = dffun.application_type.value_counts()
+
 
 
 dffun['lc_fun_amt'] = dffun["funded_amnt"] - dffun["funded_amnt_inv"]
@@ -324,11 +325,6 @@ a = dffun.groupby('grade')['int_rate'].mean()
 
 #############################################
 
-dfss = dffun.describe()
-
-dfsk=dffun.skew()
-dflg = np.log1p(dffun["tot_coll_amt"])
-dflg.skew()
 
 
 # Reindexing the df
@@ -358,52 +354,6 @@ dffun.to_csv("cleaned__file_updated.csv", index = False)
 
 dffun.loc[(dffun['loan_status']=='Charged Off') | (dffun['loan_status']== 'Default'),'total_pay_f'] = dffun['total_pymnt']
     
-
-# Skwness 
-
-dfsk=pd.DataFrame()
-
-dfsk = pd.DataFrame(dffun.skew())
-dfsk.columns = ['Skew']
-dfsk["col"] = dfsk.index
-
-dfsk=dfsk.reset_index()
-
-dfsk=dfsk.drop(['index'],axis=1)
-
-dfhigsk = dfsk.loc[dfsk['Skew'] > 3]
-
-dflowsk = dfsk.loc[dfsk['Skew'] < 3]
-
-dflist = dfhigsk['col'].tolist()
-
-df_skew = dffun[dflist]
-
-dflg = np.log1p(df_skew)
-
-dflguse =pd.DataFrame()
-dflguse = pd.DataFrame(dflg.skew())
-dflguse.columns = ['Skew']
-dflguse["col"] = dflguse.index
-dflguse=dflguse.reset_index()
-dflguse = dflguse.drop(['index'],axis=1)
-
-dflgkeep = dflguse[(dflguse['Skew'] < 3) & (dflguse['Skew'] > -3)]
-
-df_log_cols = dflgkeep['col'].tolist()
-
-df_log_list = dflg[df_log_cols]
-
-
-dflogvar = df_log_list.add_prefix('log_')
-
-dflgkeep['col'] = 'log_' + dflgkeep['col']
-
-dffun_ = pd.concat([dffun,dflogvar],axis=1, sort = False)
-
-frm = [dflgkeep,dflowsk]
-
-df_skew_final = pd.concat(frm, sort = False)
 
 
 #T-Test 
@@ -477,4 +427,93 @@ del dffun['term']
 del dffun['url']
 del dffun['zip_code']
 del dffun['initial_list_status']
+del dffun ['collections_12_mths_ex_med'] 
 
+
+# dropping the rows whose paymnt plan = y because only 10 ppl have yes in the whole population
+dffun = dffun[dffun.pymnt_plan !='y']
+
+#dropping the rows whose application type is "joint" before dropping the whole columns
+
+dffun = dffun[dffun.application_type != 'JOINT']
+
+
+# Removing the column application type, coz our DF everyone is indiviual now
+del dffun['application_type']
+
+
+#converting null into zero
+dffun['total_rev_hi_lim'].fillna(0, inplace = True)
+
+# Skwness 
+
+dfsk=pd.DataFrame()
+
+dfsk = pd.DataFrame(dffun.skew())
+dfsk.columns = ['Skew']
+dfsk["col"] = dfsk.index
+
+dfsk=dfsk.reset_index()
+
+dfsk=dfsk.drop(['index'],axis=1)
+
+dfhigsk = dfsk.loc[dfsk['Skew'] > 3]
+
+dflowsk = dfsk.loc[dfsk['Skew'] < 3]
+
+dflist = dfhigsk['col'].tolist()
+
+df_skew = dffun[dflist]
+
+dflg = np.log1p(df_skew)
+
+dflguse =pd.DataFrame()
+dflguse = pd.DataFrame(dflg.skew())
+dflguse.columns = ['Skew']
+dflguse["col"] = dflguse.index
+dflguse=dflguse.reset_index()
+dflguse = dflguse.drop(['index'],axis=1)
+
+dflgkeep = dflguse[(dflguse['Skew'] < 3) & (dflguse['Skew'] > -3)]
+
+df_log_cols = dflgkeep['col'].tolist()
+
+df_log_list = dflg[df_log_cols]
+
+
+dflogvar = df_log_list.add_prefix('log_')
+
+dflgkeep['col'] = 'log_' + dflgkeep['col']
+
+dffun_ = pd.concat([dffun,dflogvar],axis=1, sort = False)
+
+df_last = dffun_.head()
+frm = [dflgkeep,dflowsk]
+
+df_skew_final = pd.concat(frm, sort = False)
+
+
+del dffun_['id']
+del dffun_['member_id']
+del dffun_['lc_fun_amt']
+del dffun_['annual_inc']
+del dffun_['pub_rec']
+del dffun_['revol_bal']
+del dffun_['total_rev_hi_lim']
+del dffun_['acc_now_delinq']
+del dffun_['full_fun_amt']
+dffun_.to_csv("aa.csv", index = False)
+
+counttest = dffun.collections_12_mths_ex_med.value_counts()
+
+
+#Reindexing the column
+dffun_ = dffun_[['loan_amnt', 'funded_amnt', 'funded_amnt_inv', 'int_rate', 'installment', 'log_annual_inc', 'dti',
+                 'inq_last_6mths','open_acc', 'log_pub_rec', 'log_revol_bal', 'revol_util' , 'total_acc' ,
+                 'tot_cur_bal', 'log_total_rev_hi_lim' ,'log_lc_fun_amt','return_per' ,'total_pay_f' , 'grade','sub_grade','emp_title',
+                 'emp_length','home_ownership','verification_status','issue_d','loan_status', 'pymnt_plan', 'purpose', 'title',
+                 'addr_state','earliest_cr_line','last_credit_pull_d','issue_date', 'future_month' , 'paid_date', 'month', 'lc_fun',
+                 'full_amt','over_five'
+                 ]]
+
+df_head = dffun_.head(100)
