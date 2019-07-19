@@ -2,6 +2,16 @@ import pandas as pd
 import os
 import numpy as np
 from pandas.api.types import is_numeric_dtype
+from scipy import stats
+from category_encoders import *
+import seaborn as sns
+import matplotlib.pyplot as plt
+from statsmodels.stats.multicomp import (pairwise_tukeyhsd,
+                                         MultiComparison)
+import statsmodels.api as sm
+from statsmodels.formula.api import ols
+import scipy.stats as stats
+
 # Selectin path & reading the file
 z = r'C:\Users\aatis\Desktop\Applied Analytics\Summer\Project\loan.csv'
 x = r'C:\Users\aatis\Desktop\Applied Analytics\Summer\Project\loan.update.csv'
@@ -49,7 +59,7 @@ df = df[(df['grade'] != "G") & (df['loan_status'] != 'Does not meet the credit p
 
 
 # Percentage of null values
-Null_percentage = dffun.isnull().sum()/len(dffun)*100
+Null_percentage = df.isnull().sum()/len(df)*100
 Null_percentaage1 = df_clean.isnull().sum()/len(df_clean)*100
 
 #selecting the columns which are less than 10% null value
@@ -225,6 +235,7 @@ df_clean['Late_Payment_Modifier'] = df_clean.apply(paymentModifier,axis = 1)
 df_clean['Late_Payment_Modifier'].astype(float)
 
 
+
 dffun = pd.DataFrame(df_clean)
 
 # Creating issue_date column from issue
@@ -366,7 +377,7 @@ homevsloan1 = dffun[(dffun['home_ownership'] == 'MORTGAGE')]
 mortage =homevsloan1['loan_amnt']
 # h0 = a11> = b11 h1 = b11 > a11
 
-from scipy import stats
+
 
 print(stats.ttest_ind(rent,mortage, equal_var = False)) # p < .001 reject h0 , ppl who have mortage tend to get more loan amount
 
@@ -490,7 +501,7 @@ dffun_ = pd.concat([dffun,dflogvar],axis=1, sort = False)
 df_last = dffun_.head()
 frm = [dflgkeep,dflowsk]
 
-df_skew_final = pd.concat(frm, sort = False)
+    df_skew_final = pd.concat(frm, sort = False)
 
 
 del dffun_['id']
@@ -502,6 +513,7 @@ del dffun_['revol_bal']
 del dffun_['total_rev_hi_lim']
 del dffun_['acc_now_delinq']
 del dffun_['full_fun_amt']
+del dffun_[]
 dffun_.to_csv("aa.csv", index = False)
 
 counttest = dffun.collections_12_mths_ex_med.value_counts()
@@ -516,4 +528,38 @@ dffun_ = dffun_[['loan_amnt', 'funded_amnt', 'funded_amnt_inv', 'int_rate', 'ins
                  'full_amt','over_five'
                  ]]
 
+
+dffun_.to_csv("final.csv", index = False)
+
 df_head = dffun_.head(100)
+
+x = dffun_[['loan_amnt','log_annual_inc','dti','inq_last_6mths','open_acc','log_revol_bal','funded_amnt','int_rate','installment']]
+y = dffun_[['over_five']]
+
+enc = BinaryEncoder(cols= ['grade']).fit(x)
+num = enc.transform(x)
+zzz = dffun_.head()
+
+
+stats.pearsonr(x,y)
+# plotting 
+sns.set(style = "ticks", color_codes = True)
+
+#Homeownership vs loan_amount vs month
+
+sns.catplot(x= "loan_amnt", y="home_ownership", hue ="month", kind="violin",data= dffun_)
+
+
+# ANOVA
+aa = dffun_[['grade','return_per']]
+aa.columns = ['grade', 'value']
+
+sns.boxplot(x ="grade" ,y ="value" ,  data = aa, palette = "Set3")
+model = ols('value ~ C(grade)', data = aa).fit()
+anova_table = sm.stats.anova_lm(model, typ =2 )
+anova_table
+
+m_comp = pairwise_tukeyhsd(endog = aa['value'], groups = aa['grade'] , alpha =0.05)
+print(m_comp)
+
+
