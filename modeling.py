@@ -269,17 +269,17 @@ lpm_F = (sum(grade_F_pm['total_rec_late_fee'])/ sum(grade_F_pm['funded_amnt']))*
 #Function for making new column Late Payment Modifier
 def paymentModifier (i):
     if i['grade'] == 'A':
-        return a
+        return lpm_A
     elif i['grade'] == 'B':
-        return b
+        return lpm_B
     elif i['grade'] == 'C':
-        return c
+        return lpm_C
     elif i['grade'] == 'D':
-        return d
+        return lpm_D
     elif i['grade'] == 'E':
-        return e
+        return lpm_E
     elif i['grade'] == 'F':
-        return f
+        return lpm_F
 
 
 #Applying the function
@@ -294,14 +294,18 @@ dffun["issue_date"] = pd.to_datetime(dffun["issue_d"]).dt.date
 
 df_head = df_clean.head()
 
+dffun['term'].astype(str)
 
+
+dffun["num_month"] = dffun.term.str.extract('(\d+)').astype(str)
+dffun['num_month'] = dffun.num_month.astype(int)
 # function for months
-def f(row):
-    if row['term'] == "36 months":
-        val = 36
-    else: 
-        val = 60
-    return val
+#def f(row):
+#    if row['num_month'] == " 36 months":
+#        val = 36
+#    else: 
+#        val = 60
+#    return val
 
 dffun["month"] = dffun.apply(f,axis=1)
 
@@ -361,47 +365,42 @@ dfhead = dffun.head(100)
 # Total amount paid for active loan
 def total (c):
     if (c['loan_status'] != "Fully Paid" ) & (c['loan_status'] != 'Charged Off') & (c['loan_status'] != "Default"):
-        return c['installment'] * c['month']
+        return c['installment'] * c['num_month']
     else:
-        return c['total_pymnt']
+        return 0
 
 
 dffun["total_payment_asu"] = dffun.apply(total, axis =1)
 
-dffun["total_pay_f"] = dffun['total_payment_asu'] * dffun['late_pay']
-dffun["total_pay_f"] = dffun['total_payment_asu'] * dffun['late_pay']
-dffun["return_per"] = dffun['total_pay_f'] / dffun['funded_amnt']
 
-df_clean.to_csv('check.csv', index = False)
-# late_pay for active loan
-#def late (c):
-#    if c['total_payment_asu'] != 0:
-#        return c['funded_amnt'] * c['Late_Payment_Modifier']
-#    else:
-#        return 0
+#late_pay for active loan
+def late (c):
+    if c['total_payment_asu'] != 0:
+        return c['funded_amnt'] * c['Late_Payment_Modifier']
+    else:
+        return 0
 
+dffun['late_pay'] = dffun.apply(late, axis = 1)
 
-x
-
-#total_final _pay active loan
-#def total_final (c):
-#    if c['late_pay'] != 0:
-#        return c['total_payment_asu'] * c['late_pay']
-#    else: 
-#        return 0
+#total_final _pay 
+def total_final (c):
+    if c['late_pay'] != 0:
+        return c['total_payment_asu'] + c['late_pay']
+    else: 
+        return 0
     
 
+dffun['total_pay_f'] = dffun.apply(total_final, axis = 1)
 
 # return_per
 
-#def return_per(c):
-#    if c['total_pay_f'] != 0:
-#        return c['total_pay_f'] / c['funded_amnt']
-#    else:
-#        return c['total_pymnt'] / c['funded_amnt']
+def return_per(c):
+    if c['total_pay_f'] != 0:
+        return c['total_pay_f'] / c['funded_amnt']
+    else:
+        return c['total_pymnt'] / c['funded_amnt']
 
-
-
+dffun['return_per'] = dffun.apply(return_per, axis = 1)
 #dffun["total_pay_f"] =  dffun['total_payment_asu'] + dffun['late_pay']
 dfhead = dffun.head(100)
 #Rate of Return
@@ -411,7 +410,7 @@ dfhead = dffun.head(100)
 # Over_five
 
 def f(row):
-    if row['return_per'] > 2.0:
+    if row['return_per'] > 1.20:
         val = 1
     else:
         val = 0
@@ -912,7 +911,7 @@ df_final_cat = df_final[['grade','sub_grade','home_ownership','verification_stat
 # Predicition
 
 x = df_final[['loan_amnt','dti','annual_inc', 'inq_last_6mths','open_acc','log_pub_rec','revol_bal',
-'revol_util','tot_cur_bal','delinq_2yrs','acc_now_delinq','out_prncp_inv','month','emp_more_fiv','lc_fun',
+'revol_util','tot_cur_bal','delinq_2yrs','acc_now_delinq','month','emp_more_fiv','lc_fun',
  'home_ownership','verification_status','purpose','addr_state']]
 
 
@@ -932,9 +931,9 @@ x = pd.concat([z,dum],axis=1, sort = False)
 a = x.iloc[:,15:19]
 adf_head = xc.head()
 
-Y = df_final[['return_per']]
+Y = df_final[['over_five']]
 
-
+df_head = dffun.head()
 x = np.array(x)
 
 
@@ -1005,8 +1004,8 @@ result = mean_absolute_error(Y_test,(regressor_linear.predict(x_test)))
 ########################################## Decision Tree ##################################
 
 #decision Tree
-from sklearn.tree import DecisionTreeRegressor
-regressor = DecisionTreeRegressor(random_state = 0)
+from sklearn.tree import DecisionTreeClassifier
+regressor = DecisionTreeClassifier(random_state = 0)
 regressor.fit(x_train,Y_train)
 
 
@@ -1030,8 +1029,8 @@ print("Accuracy: %0.2f (+/- %0.2f)" % (score_DT.mean(), score_DT.std() *2))
 ######################## Random Forest ################################33
 
 # Fitting Random Forest classifier to the training set
-from sklearn.ensemble import RandomForestRegressor
-regressor_r = RandomForestRegressor(n_estimators = 10 , random_state =0 )
+from sklearn.ensemble import RandomForestClassifier
+regressor_r = RandomForestClassifier(n_estimators = 10 , max_depth =3, random_state =0 )
 regressor_r.fit(x_train,Y_train)
 
 
@@ -1041,7 +1040,7 @@ print('Accuracy:{:.2f}'.format(regressor_r.score(x_test,Y_test)))
 
 
 #Cross for RFdecision
-score_RF = cross_val_score(classifier_r, xc, Y, cv =5, scoring = 'accuracy')
+score_RF = cross_val_score(regressor_r, xc, Y, cv =5, scoring = 'accuracy')
 print("Accuracy: %0.2f (+/- %0.2f)" % (score_RF.mean(), score_RF.std() *2))
 df_final_list = list(xc.columns)
 # Import tools needed for visualization
@@ -1073,9 +1072,9 @@ feature_importances = sorted(feature_importances, key = lambda x: x[1], reverse 
 
 
 
-# Import matplotlib for plotting and use magic command for Jupyter Notebooks
+# Import matplotlib for plotting 
 import matplotlib.pyplot as plt
-#%matplotlib inline
+%matplotlib inline
 # Set the style
 plt.style.use('fivethirtyeight')
 # list of x locations for plotting
@@ -1090,14 +1089,29 @@ plt.ylabel('Importance'); plt.xlabel('Variable'); plt.title('Variable Importance
 #################################################LOGISTIC REGRESSION #########################
 
 
-#Cross for Logisitic
 
-from sklearn.model_selection import cross_val_score
-score_LR = cross_val_score(classifier, xc, Y, cv =5, scoring = 'accuracy')
 #fitting the logisitic regression to the training set
 from sklearn.linear_model import LogisticRegression
 classifier = LogisticRegression()
 classifier.fit(x_train,Y_train)
+
+
+#prediciting the test set results
+Y_pred = classifier.predict(x_test)
+
+
+# Making the confusion Matrix
+from sklearn.metrics import confusion_matrix
+cm = confusion_matrix(Y_test,Y_pred)
+
+
+
+#Cross for Logisitic
+from sklearn.model_selection import cross_val_score
+score_LR = cross_val_score(classifier, xc, Y, cv =5, scoring = 'accuracy')
+print("Accuracy: %0.2f (+/- %0.2f)" % (score_LR.mean(), score_LR.std() *2))
+
+
 
 
 #score
