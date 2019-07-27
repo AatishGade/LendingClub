@@ -307,21 +307,21 @@ dffun['num_month'] = dffun.num_month.astype(int)
 #        val = 60
 #    return val
 
-dffun["month"] = dffun.apply(f,axis=1)
+#dffun["month"] = dffun.apply(f,axis=1)
 
 # creating future month column
-dffun["future_month"] = dffun.apply(lambda x: x['issue_date'] + pd.offsets.DateOffset(months=x['month']), 1)
+#dffun["future_month"] = dffun.apply(lambda x: x['issue_date'] + pd.offsets.DateOffset(months=x['month']), 1)
 
-dffun["future_month"] = pd.to_datetime(dffun["future_month"]).dt.date
+#dffun["future_month"] = pd.to_datetime(dffun["future_month"]).dt.date
 
 
 #creating paid_date column
 
-dffun["paid_date"] = dffun['future_month']
+#dffun["paid_date"] = dffun['future_month']
 
-dffun.loc[df['loan_status']=='Fully Paid','paid_date'] = dffun['last_pymnt_d']
+#dffun.loc[df['loan_status']=='Fully Paid','paid_date'] = dffun['last_pymnt_d']
 
-dffun["paid_date"]=pd.to_datetime(dffun["paid_date"]).dt.date
+#dffun["paid_date"]=pd.to_datetime(dffun["paid_date"]).dt.date
 
 #dffun["paid_date"] = dffun.apply(lambda x: x['paid_date'] + pd.offsets.DateOffset(months=x['month']), 1)
 
@@ -809,8 +809,8 @@ print(m_comp)
 
 ############################################ FINAL DATASET ################################
 df_final = dffun_[['loan_amnt','dti','int_rate','annual_inc','inq_last_6mths','open_acc','log_pub_rec','revol_bal',
-                   'revol_util','tot_cur_bal','lc_fun_amt','delinq_2yrs','total_pay_f','acc_now_delinq','out_prncp_inv','month',
-                   'emp_more_fiv','lc_fun','grade','sub_grade', 'home_ownership','verification_status','purpose','addr_state','over_five','return_per'
+                   'revol_util','tot_cur_bal','lc_fun_amt','delinq_2yrs','total_pay_f','acc_now_delinq','out_prncp_inv','num_month',
+                   'emp_more_fiv','lc_fun','grade','sub_grade', 'home_ownership','verification_status','purpose','addr_state','over_five','return_per','installment'
                    ]]
 
 #State
@@ -882,15 +882,17 @@ count = df_final.addr_state.value_counts()
 
 
 def mth(xa):
-    if xa['month'] == 36:
+    if xa['num_month'] == 36:
         val = 1
     else:
         val=  0
     return val
 
-df_final['month'] = df_final.apply(mth,axis = 1)
+df_final['num_month'] = df_final.apply(mth,axis = 1)
 
 count = df_final.emp_more_fiv.value_counts()
+
+df_final.to_csv('asofnow.csv',index = False)
 
 # continous variable
 
@@ -908,13 +910,29 @@ df_final_boo = dffun_[['month','emp_more_fiv','lc_fun','over_five']]
 df_final_cat = df_final[['grade','sub_grade','home_ownership','verification_status','purpose','addr_state']]
 
 
+
+df_final['per_month'] = df_final['annual_inc']/12
+df_final['pay_to_income'] = df_final['installment']/df_final['per_month']        
+
+
 # Predicition
 
-x = df_final[['loan_amnt','dti','annual_inc', 'inq_last_6mths','open_acc','log_pub_rec','revol_bal',
-'revol_util','tot_cur_bal','delinq_2yrs','acc_now_delinq','month','emp_more_fiv','lc_fun',
- 'home_ownership','verification_status','purpose','addr_state']]
+x = df_final[['loan_amnt','dti','annual_inc', 'inq_last_6mths','open_acc','log_pub_rec',#'revol_bal',
+'revol_util',#'tot_cur_bal',
+'delinq_2yrs','acc_now_delinq',
+#'num_month',
+ 'pay_to_income','emp_more_fiv','lc_fun',
+ 'home_ownership','verification_status','purpose','addr_state'
+]]
+
+df_test = df_final [['loan_amnt','dti','annual_inc', 'inq_last_6mths','open_acc','log_pub_rec',#'revol_bal',
+'revol_util',#'tot_cur_bal',
+'delinq_2yrs','acc_now_delinq',
+'num_month', 'pay_to_income','over_five','emp_more_fiv','lc_fun',
+'home_ownership','verification_status','purpose','addr_state']]
 
 
+df_test.to_csv('test.csv', index = False)
 #x = df_final[['dti']]
 
 
@@ -932,7 +950,7 @@ a = x.iloc[:,15:19]
 adf_head = xc.head()
 
 Y = df_final[['over_five']]
-
+count = df_final.num_month.value_counts()
 df_head = dffun.head()
 x = np.array(x)
 
@@ -1030,7 +1048,7 @@ print("Accuracy: %0.2f (+/- %0.2f)" % (score_DT.mean(), score_DT.std() *2))
 
 # Fitting Random Forest classifier to the training set
 from sklearn.ensemble import RandomForestClassifier
-regressor_r = RandomForestClassifier(n_estimators = 10 , max_depth =3, random_state =0 )
+regressor_r = RandomForestClassifier(n_estimators = 10 ,  random_state =0 )
 regressor_r.fit(x_train,Y_train)
 
 
@@ -1088,7 +1106,9 @@ plt.ylabel('Importance'); plt.xlabel('Variable'); plt.title('Variable Importance
 
 #################################################LOGISTIC REGRESSION #########################
 
-
+#splitting the dataset
+from sklearn.model_selection import train_test_split
+x_train, x_test ,Y_train ,Y_test = train_test_split(xc,Y, test_size= 0.30, random_state = 0) 
 
 #fitting the logisitic regression to the training set
 from sklearn.linear_model import LogisticRegression
@@ -1116,3 +1136,59 @@ print("Accuracy: %0.2f (+/- %0.2f)" % (score_LR.mean(), score_LR.std() *2))
 
 #score
 print('Accuracy:{:.2f}'.format(classifier.score(x_test,Y_test)))
+
+
+############################################# NEURAL NETWORK #############################
+from keras.layers import Activation, Dense
+from keras.models import Sequential
+from keras.utils.vis_utils import plot_model
+model = Sequential()
+model.add(Dense(12, input_dim = 36, activation = 'tanh'))
+model.add(Dense(8, activation = 'relu'))
+model.add(Dense(1, activation = 'sigmoid'))
+model.compile(loss='binary_crossentropy', optimizer='sgd', metrics=['accuracy'])
+model.fit(x_train, Y_train, epochs=300, batch_size=20000)
+accuracy = model.evaluate(x_train, Y_train)
+Y_Pred_NT = model.predict_classes(x_test)
+model.summary()
+plot_model(model, to_file='model_plot.png', show_shapes=True, show_layer_names=True)
+
+
+
+########################################## K-Clustering #########################
+
+x = df_final[['loan_amnt','dti','annual_inc', 'inq_last_6mths','open_acc','log_pub_rec','revol_bal',
+'revol_util','tot_cur_bal','delinq_2yrs','acc_now_delinq','num_month','emp_more_fiv','lc_fun',
+ 'home_ownership','verification_status','purpose','addr_state']]
+
+x_con = df_final[['loan_amnt','dti','annual_inc', 'inq_last_6mths','open_acc','log_pub_rec','revol_bal',
+'revol_util','tot_cur_bal','delinq_2yrs','acc_now_delinq']]
+
+
+from sklearn.cluster import KMeans
+wcss = []
+for i in range(1, 11):
+    kmeans = KMeans(n_clusters = i, init = 'k-means++', max_iter =300, n_init= 10, random_state = 0)
+    kmeans.fit(x_con)
+    wcss.append(kmeans.inertia_)
+plt.plot(range(1, 11), wcss)
+plt.title('The elbow method')
+plt.xlabel('Number of cluster')
+plt.ylabel('Wcss')
+plt.show()
+
+df_head = x_con.head()
+#Applying k-means to the mall dataset
+kmeans = KMeans(n_clusters = 3, init ='k-means++', max_iter = 300, n_init = 10, random_state =0)
+y_kmeans = kmeans.fit_predict(x_con)
+
+plt.scatter(x_con.iloc[:, 0], x_con.iloc[:, 1], c=y_kmeans, s=50, cmap='viridis')
+
+centers = kmeans.cluster_centers_
+plt.scatter(centers[:, 0], centers[:, 1], c='black', s=200, alpha=0.5);
+
+
+
+
+#################################### Naivye Bayse ###################################
+
