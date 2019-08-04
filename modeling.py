@@ -243,9 +243,8 @@ def change_fullypaid (x):
 df_clean['FullyPaid_loan_Average_late_fee'] = df_clean.apply(change_fullypaid, axis =1)
 df_clean['FullyPaid_loan_Average_late_fee'].astype(float)
 
-#Creating late Pyament modifier
-df_head = grade_A_pm.head()
 
+#Creating late Pyament modifier
 
 grade_A_pm = df_clean[(df_clean['grade']=='A')]
 lpm_A = (sum(grade_A_pm['total_rec_late_fee'])/ sum(grade_A_pm['funded_amnt']))*100
@@ -372,7 +371,6 @@ def total (c):
 
 dffun["total_payment_asu"] = dffun.apply(total, axis =1)
 
-
 #late_pay for active loan
 def late (c):
     if c['total_payment_asu'] != 0:
@@ -410,17 +408,19 @@ dfhead = dffun.head(100)
 # Over_five
 
 def f(row):
-    if row['return_per'] > 1.20:
+    if row['return_per'] > 1.15:
         val = 1
     else:
         val = 0
     return val
 
 
-dffun["over_five"] = dffun.apply(f,axis=1)
+#dffun["over_five"] = dffun.apply(f,axis=1)
 
 
-count = dffun.over_five.value_counts()
+dffun["over_15"] = dffun.apply(f,axis=1)
+count = dffun.over_15.value_counts()
+len(dffun)
 
 ###########################################
 
@@ -696,6 +696,7 @@ data_corr = data.corr()
 
 cols=data.columns
 
+
 # Set the threshold to select only highly correlated attributes
 threshold = 0.5
 
@@ -720,6 +721,27 @@ for v,i,j in s_corr_list:
 for v,i,j in s_corr_list:
     sns.pairplot(data, size=6, x_vars=cols[i],y_vars=cols[j])
 plt.show()
+
+
+
+
+
+corr = data.corr()
+import seaborn as sns
+
+ax = sns.heatmap(
+    corr, 
+    vmin=-1, vmax=1, center=0,
+    cmap=sns.diverging_palette(20, 220, n=200),
+    square=True
+)
+ax.set_xticklabels(
+    ax.get_xticklabels(),
+    rotation= 'vertical',
+    horizontalalignment='right'
+);
+
+
 
 ###################################################
 
@@ -797,7 +819,7 @@ aa.columns = ['grade', 'value']
 
 sns.boxplot(x ="grade" ,y ="value" ,  data = aa, palette = "Set3")
 model = ols('value ~ C(grade)', data = aa).fit()
-anova_table = sm.stats.anova_lm(model, typ =2 )
+anova_table = sm.stats.anova_lm(model, typ =1 )
 anova_table
 
 m_comp = pairwise_tukeyhsd(endog = aa['value'], groups = aa['grade'] , alpha =0.05)
@@ -810,7 +832,7 @@ print(m_comp)
 ############################################ FINAL DATASET ################################
 df_final = dffun_[['loan_amnt','dti','int_rate','annual_inc','inq_last_6mths','open_acc','log_pub_rec','revol_bal',
                    'revol_util','tot_cur_bal','lc_fun_amt','delinq_2yrs','total_pay_f','acc_now_delinq','out_prncp_inv','num_month',
-                   'emp_more_fiv','lc_fun','grade','sub_grade', 'home_ownership','verification_status','purpose','addr_state','over_five','return_per','installment'
+                   'emp_more_fiv','lc_fun','grade','sub_grade', 'home_ownership','verification_status','purpose','addr_state','return_per','installment','over_15'
                    ]]
 
 #State
@@ -894,6 +916,32 @@ count = df_final.emp_more_fiv.value_counts()
 
 df_final.to_csv('asofnow.csv',index = False)
 
+
+
+df_head = df_final.head()
+
+a_gd = df_final[(df_final['grade'] == 'A')].sample(n =50000, random_state = 1)
+b_gd = df_final[(df_final['grade'] == 'B')].sample(n =50000, random_state = 1)
+c_gd = df_final[(df_final['grade'] == 'C')].sample(n =50000, random_state = 1)
+d_gd = df_final[(df_final['grade'] == 'D')].sample(n =50000, random_state = 1 )
+e_gd = df_final[(df_final['grade'] == 'E')].sample(n =50000, random_state = 1)
+f_gd = df_final[(df_final['grade'] == 'F')].sample(n = 50000, random_state = 1)
+
+count = b_gd.over_five.value_counts()
+a_gd.to_csv("g_a.csv", index = False)
+b_gd.to_csv("g_b.csv", index = False)
+c_gd.to_csv("g_c.csv", index = False)
+d_gd.to_csv("g_d.csv", index = False)
+e_gd.to_csv("g_e.csv", index = False)
+f_gd.to_csv("g_f.csv", index = False)
+
+
+g = df_final.groupby('grade')['over_five'].count()
+
+count = a_gd.over_five.value_counts()
+
+
+
 # continous variable
 
 df_final_cont = dffun_[['loan_amnt','int_rate', 'annual_inc', 'inq_last_6mths','open_acc','log_pub_rec','revol_bal',
@@ -921,21 +969,21 @@ x = df_final[['loan_amnt','dti','annual_inc', 'inq_last_6mths','open_acc','log_p
 'revol_util',#'tot_cur_bal',
 'delinq_2yrs','acc_now_delinq',
 #'num_month',
- 'pay_to_income','emp_more_fiv','lc_fun',
- 'home_ownership','verification_status','purpose','addr_state'
+ 'pay_to_income','emp_more_fiv','lc_fun' , 'grade'
+ 
+#'home_ownership','verification_status','addr_state'
 ]]
 
 df_test = df_final [['loan_amnt','dti','annual_inc', 'inq_last_6mths','open_acc','log_pub_rec',#'revol_bal',
 'revol_util',#'tot_cur_bal',
 'delinq_2yrs','acc_now_delinq',
-'num_month', 'pay_to_income','over_five','emp_more_fiv','lc_fun',
-'home_ownership','verification_status','purpose','addr_state']]
+#'num_month',
+ 'pay_to_income','emp_more_fiv','lc_fun' , 'grade','over_15']]
 
 
-df_test.to_csv('test.csv', index = False)
 #x = df_final[['dti']]
 
-
+df_test.to_csv("modeling.csv",index=False)
 head = z.head()
 
 dum = pd.get_dummies(df_final_cat)
@@ -949,7 +997,7 @@ x = pd.concat([z,dum],axis=1, sort = False)
 a = x.iloc[:,15:19]
 adf_head = xc.head()
 
-Y = df_final[['over_five']]
+Y = df_final[['over_15']]
 count = df_final.num_month.value_counts()
 df_head = dffun.head()
 x = np.array(x)
@@ -975,7 +1023,9 @@ x = np.array(x)
 
 #Encoding
 
-xc = pd.get_dummies(x, columns =['home_ownership','verification_status','purpose','addr_state'])
+xc = pd.get_dummies(x, columns = ['grade'])
+
+#xc = pd.get_dummies(x, columns =['home_ownership','verification_status','addr_state'])
     
 #splitting the dataset
 from sklearn.model_selection import train_test_split
@@ -1022,6 +1072,7 @@ result = mean_absolute_error(Y_test,(regressor_linear.predict(x_test)))
 ########################################## Decision Tree ##################################
 
 #decision Tree
+from sklearn import tree
 from sklearn.tree import DecisionTreeClassifier
 regressor = DecisionTreeClassifier(random_state = 0)
 regressor.fit(x_train,Y_train)
@@ -1031,35 +1082,81 @@ regressor.fit(x_train,Y_train)
 Y_pred_DT = regressor.predict(x_test)
 
 #Score for DT
-print('Accuracy:{:.2f}'.format(regressor.score(x_test,Y_test)))
+print('Accuracy:{:.4f}'.format(regressor.score(x_test,Y_test)))
 
-
-
-
+regressor.tree_.node_count
 #Cross for decision
-score_DT = cross_val_score(regressor, xc, Y, cv =5, scoring = 'accuracy')
-print("Accuracy: %0.2f (+/- %0.2f)" % (score_DT.mean(), score_DT.std() *2))
+score_DT = cross_val_score(regressor, x_train, Y_train, cv =5, scoring = 'accuracy')
+print("Accuracy: %0.4f (+/- %0.2f)" % (score_DT.mean(), score_DT.std() *2))
+
+
+regressor.estimators_
 
 
 
+x.to_csv("x.csv", index =False)
+Y.to_csv("y.csv", index =False)
 
 
-######################## Random Forest ################################33
+######################## Random Forest ##################################
 
 # Fitting Random Forest classifier to the training set
-from sklearn.ensemble import RandomForestClassifier
-regressor_r = RandomForestClassifier(n_estimators = 10 ,  random_state =0 )
-regressor_r.fit(x_train,Y_train)
+        from sklearn.ensemble import RandomForestClassifier
+        regressor_r = RandomForestClassifier(n_estimators = 300 , max_depth = 10,  random_state =0, n_jobs = -1, oob_score = True, bootstrap = True )
+        regressor_r.fit(x_train,Y_train)
+
+print('R^2 Training Score: {:.4f} \nOOB Score: {:.4f} \nR^2 Test Score: {:.4f}'.format(regressor_r.score(x_train, Y_train), 
+                                                                                             regressor_r.oob_score_,
+                                                                                             regressor_r.score(x_test, Y_test)))
 
 
 
-#Score for RT
-print('Accuracy:{:.2f}'.format(regressor_r.score(x_test,Y_test)))
+count = Y.over_five.value_counts()
+# confusion Matrix plot
+
+from sklearn.metrics import confusion_matrix
+y_pred_rg = regressor_r.predict(x_test)
+mat = confusion_matrix(Y_test, y_pred_rg)
+sns.heatmap(mat.T, square=True, annot=True, fmt='d', cbar=False)
+plt.xlabel('Actual label')
+plt.ylabel('predicted label');
+
+
+
+
+########################### PREDICTION PLOT ###########################
+a = np.array(Y_test)
+
+r = []
+for pair in zip(y_pred_rg[:100], a[:100]):
+        r.append(pair)
+
+plt.plot(r)
+
+aa = np.array(Y_train)
+
+from treeinterpreter import treeinterpreter as ti
+
+selected_rows = [13, 18]
+selected_df = x_train.iloc[selected_rows,:].values
+prediction, bias, contributions = ti.predict(regressor_r, selected_df)
+
+
+for i in range(len(selected_rows)):
+    print("Row", selected_rows[i])
+    print("Prediction:", prediction[i][i]), print( 'Actual Value:', aa[selected_rows[i]])
+    print("Bias (trainset mean)", bias[i][i])
+    print("Feature contributions:")
+    for c, feature in sorted(zip(contributions[i], 
+                                 x_train.columns), 
+                             key=lambda x: np.logical_not(x[0]).any()):
+        print(feature, round(c[i],4))
+    print("-"*20)
 
 
 #Cross for RFdecision
 score_RF = cross_val_score(regressor_r, xc, Y, cv =5, scoring = 'accuracy')
-print("Accuracy: %0.2f (+/- %0.2f)" % (score_RF.mean(), score_RF.std() *2))
+print("Accuracy: %0.4f (+/- %0.2f)" % (score_RF.mean(), score_RF.std() *2))
 df_final_list = list(xc.columns)
 # Import tools needed for visualization
 from sklearn.tree import export_graphviz
@@ -1077,12 +1174,12 @@ export_graphviz(tree, out_file = 'tree.dot', feature_names = df_final_list, roun
 (graph, ) = pydot.graph_from_dot_file('tree.dot')
 # Write graph to a png file
 graph.write_png('tree.png')
-
+        
 
 # Get numerical feature importances
 importances = list(regressor_r.feature_importances_)
 # List of tuples with variable and importance
-feature_importances = [(xc, round(importance, 2)) for xc, importance in zip(df_final_list, importances)]
+feature_importances = [(xc, round(importance, 4)) for xc, importance in zip(df_final_list, importances)]
 # Sort the feature importances by most important first
 feature_importances = sorted(feature_importances, key = lambda x: x[1], reverse = True)
 # Print out the feature and importances 
@@ -1098,17 +1195,23 @@ plt.style.use('fivethirtyeight')
 # list of x locations for plotting
 x_values = list(range(len(importances)))
 # Make a bar chart
+
 plt.bar(x_values, importances, orientation = 'vertical')
 # Tick labels for x axis
 plt.xticks(x_values, df_final_list, rotation='vertical')
 # Axis labels and title
 plt.ylabel('Importance'); plt.xlabel('Variable'); plt.title('Variable Importances');
 
+
+
+
+
+
 #################################################LOGISTIC REGRESSION #########################
 
 #splitting the dataset
 from sklearn.model_selection import train_test_split
-x_train, x_test ,Y_train ,Y_test = train_test_split(xc,Y, test_size= 0.30, random_state = 0) 
+x_train, x_test ,Y_train ,Y_test = train_test_split(xc,Y, test_size= 0.70, random_state = 0) 
 
 #fitting the logisitic regression to the training set
 from sklearn.linear_model import LogisticRegression
@@ -1133,7 +1236,6 @@ print("Accuracy: %0.2f (+/- %0.2f)" % (score_LR.mean(), score_LR.std() *2))
 
 
 
-
 #score
 print('Accuracy:{:.2f}'.format(classifier.score(x_test,Y_test)))
 
@@ -1143,17 +1245,24 @@ from keras.layers import Activation, Dense
 from keras.models import Sequential
 from keras.utils.vis_utils import plot_model
 model = Sequential()
-model.add(Dense(12, input_dim = 36, activation = 'tanh'))
+model.add(Dense(12, input_dim = 18, activation = 'relu'))
 model.add(Dense(8, activation = 'relu'))
 model.add(Dense(1, activation = 'sigmoid'))
-model.compile(loss='binary_crossentropy', optimizer='sgd', metrics=['accuracy'])
-model.fit(x_train, Y_train, epochs=300, batch_size=20000)
+model.compile(loss='binary_crossentropy', optimizer='adam', metrics=['accuracy'])
+az = model.fit(x_train, Y_train,  epochs=500, batch_size=200000)
 accuracy = model.evaluate(x_train, Y_train)
 Y_Pred_NT = model.predict_classes(x_test)
 model.summary()
 plot_model(model, to_file='model_plot.png', show_shapes=True, show_layer_names=True)
 
 
+
+plt.plot(az.history['acc'])
+plt.title('Model acc')
+plt.ylabel('acc')
+plt.xlabel('Epoch')
+#plt.legend(['loss', 'Accu'], loc='upper left')
+plt.show()
 
 ########################################## K-Clustering #########################
 
@@ -1190,5 +1299,4 @@ plt.scatter(centers[:, 0], centers[:, 1], c='black', s=200, alpha=0.5);
 
 
 
-#################################### Naivye Bayse ###################################
-
+    
